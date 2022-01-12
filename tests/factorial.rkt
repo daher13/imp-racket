@@ -1,4 +1,4 @@
-#lang imp
+#lang imp/debug/tokenize-only
 
 fact := 1  ;
 while 0 < n do
