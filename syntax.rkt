@@ -3,7 +3,7 @@
 ;; expression syntax
 
 (struct input
-  ()
+  (id)
   #:transparent)
 
 (struct value

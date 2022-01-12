@@ -25,10 +25,10 @@
     (statement [(IDENTIFIER ASSIGN expr SEMI) (assign (var $1) $3)]
                [(PRINT expr SEMI) (sprint $2)]
                [(IF expr THEN block ELSE block) (eif $2 $4 $6)]
-               [(WHILE expr DO block) (ewhile $2 $4)])
+               [(WHILE expr DO block) (ewhile $2 $4)]
+               [(INPUT IDENTIFIER SEMI) (input (var $2))])
     (block [(BEGIN statements END) $2])
     (expr  [(NUMBER) (value $1)]
-           [(INPUT) (input)]
            [(IDENTIFIER) (var $1)]
            [(expr ADD expr) (add $1 $3)]
            [(expr SUBTRACT expr) (minus $1 $3)]
