@@ -1,4 +1,4 @@
-#lang imp/debug/final-env
+#lang imp
 
 input n;
 fact := 1 ;
@@ -7,3 +7,4 @@ begin
   fact := fact * n ;
   n := n - 1 ;
 end
+print fact ;

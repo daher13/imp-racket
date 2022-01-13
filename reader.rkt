@@ -15,13 +15,7 @@
   (datum->syntax
    #f
    `(module imp-mod racket
-      ,@(print-env (imp-interp (parse port))))))
+      ,(finish (imp-interp (parse port))))))
 
-(define (print-env env)
-  (define (print-var p)
-    (printf "~a -> ~v\n"
-            (car p)
-            (value-value (cdr p))))
-  (begin
-    (displayln "Final configuration of program environment:")
-    (map print-var (hash->list env))))
+(define (finish env)
+  (displayln "Finished!"))
