@@ -6,7 +6,7 @@
 
 (define (read-value env v)
   (let ([x (read)])
-      (hash-set env v (value x))))
+      (hash-set env (var-id v) (value x))))
 
 ;; looking up an environment
 ;; lookup-env : environment * var -> environment * value
@@ -22,13 +22,13 @@
   (eq? #t (value-value v)))
 
 (define (op-value f env v1 v2)
-  (cons env (f (value-value v1)
-               (value-value v2))))
+  (cons env (value (f (value-value v1)
+                      (value-value v2)))))
 
 (define (eval-op f env e1 e2)
   (let* ([r1 (eval-expr env e1)]
          [r2 (eval-expr (car r1) e2)])
-    (op-value f env (cdr r1) (cdr r2))))
+    (op-value f (car r2) (cdr r1) (cdr r2))))
 
 
 ;; eval-expr : env * expr -> env * expr
@@ -36,9 +36,7 @@
 (define (eval-expr env e)
   (match e
     [(value val) (cons env (value val))]
-    [(add e1 e2) (begin
-                   (displayln "hauahuaha")
-                   (eval-op + env e1 e2))]
+    [(add e1 e2) (eval-op + env e1 e2)]
     [(minus e1 e2) (eval-op - env e1 e2)]
     [(mult e1 e2) (eval-op * env e1 e2)]
     [(divv e1 e2) (eval-op / env e1 e2)]
@@ -48,7 +46,7 @@
     [(enot e1) (let* ([r1 (eval-expr env e1)])
                  (cons (car r1)
                        (value (not (value-value (cdr r1))))))]
-    [(var v) (lookup-env env v)]))
+    [(var v) (lookup-env env (var-id v))]))
 
 ;; evaluating a statement
 
@@ -56,17 +54,16 @@
 
 (define (eval-assign env v e)
   (let* ([res (eval-expr env e)])
-    (begin
-      (displayln (hash->list (car res)))
-      (hash-set env v (cdr res)))))
+    (hash-set env v (cdr res))))
 
 ; eval-stmt : environment * statement -> environment
 
 (define (eval-stmt env s)
   (match s
-    [(input v) (begin
-                 (display "Enter a value:")
-                 (read-value env v))]
+    [(input (var v))
+     (begin
+        (display "Enter a value:")
+        (read-value env v))]
     [(assign v e) (eval-assign env (var-id v) e)]
     [(eif e1 blk1 blk2)
      (let ([c (eval-expr env e1)])
@@ -96,4 +93,4 @@
 (define (imp-interp prog)
   (eval-stmts (make-immutable-hash) prog))
 
-(provide imp-interp)
+(provide imp-interp eval-expr)

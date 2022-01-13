@@ -1,5 +1,9 @@
-#lang imp
+#lang imp/debug/final-env
 
-n := 3 ;
+input n;
 fact := 1 ;
-fact := fact + 1 ;
+while 0 < n do
+begin
+  fact := fact * n ;
+  n := n - 1 ;
+end
