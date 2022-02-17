@@ -1,4 +1,4 @@
-#+OPTIONS: toc:nil date:nil reveal_mathjax:t
+#+OPTIONS: toc:nil date:nil author:nil reveal_mathjax:t
 #+OPTIONS: timestamp:nil
 #+REVEAL_TRANS: linear
 #+Title: A simple racket Interpreter: IMP
@@ -266,9 +266,18 @@ print fact ;
 
 - Use the scribble racket tool for documenting the code.
 
+- Explain its structure and how it works.
+
 ** Task 2. Extending the language
 
 - Extend the language with a for command.
   
 - Modify the lexer, parser, interpreter and syntax tree.
   
+- Document the steps done to extend the language.
+
+* Repository
+
+- The complete code is available at the following repository.
+
+[[https://github.com/rodrigogribeiro/imp-racket]]
