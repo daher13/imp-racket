@@ -281,3 +281,7 @@ print fact ;
 - The complete code is available at the following repository.
 
 [[https://github.com/rodrigogribeiro/imp-racket]]
+
+- Tutorial on lex / yacc for racket:
+
+[[https://docs.racket-lang.org/lex-yacc-example/index.html?doc=reference&rel=void.html%23%2528def._%2528%2528quote._%7E23%7E25kernel%2529._void%7E3f%2529%2529]]
