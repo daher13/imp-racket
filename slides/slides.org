@@ -284,4 +284,4 @@ print fact ;
 
 - Tutorial on lex / yacc for racket:
 
-[[https://docs.racket-lang.org/lex-yacc-example/index.html?doc=reference&rel=void.html%23%2528def._%2528%2528quote._%7E23%7E25kernel%2529._void%7E3f%2529%2529]]
+[[https://docs.racket-lang.org/lex-yacc-example/index.html?doc=reference&rel=void.html%23%2528def._%2528%2528quote._%7E23%7E25kernel%2529._void%7E3f%2529%2529][Tutorial lex/yacc]]
