@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>A simple racket Interpreter: IMP</title>
+<meta name="author" content="Rodrigo Ribeiro"/>
+<style type="text/css">
+.underline { text-decoration: underline; }
+</style>
+<link rel="stylesheet" href="file:///Users/rodrigo/reveal.js/dist/reveal.css"/>
+
+<link rel="stylesheet" href="file:///Users/rodrigo/reveal.js/dist/theme/black.css" id="theme"/>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+<section id="sec-title-slide">
+<h1 class="title">A simple racket Interpreter: IMP</h1><h2 class="author">Rodrigo Ribeiro</h2>
+</section>
+
+<section>
+<section id="slide-1">
+<h2 id="1"><span class="section-number-2">1.</span> Objectives</h2>
+<div class="outline-text-2" id="text-1">
+</div>
+</section>
+<section id="slide-1-1">
+<h3 id="1-1"><span class="section-number-3">1.1.</span> Objectives</h3>
+<ul>
+<li>Present the syntax of IMP language.</li>
+
+<li>Defining the IMP lexer and parser using Lex and yacc for racket</li>
+
+</ul>
+
+</section>
+<section id="slide-1-2">
+<h3 id="1-2"><span class="section-number-3">1.2.</span> Objectives</h3>
+<ul>
+<li>Implementing the interpreter for IMP</li>
+
+<li>Using the racket features for creating the IMP language within the
+racket interpreter.</li>
+
+</ul>
+
+</section>
+</section>
+<section>
+<section id="slide-2">
+<h2 id="2"><span class="section-number-2">2.</span> IMP language</h2>
+<div class="outline-text-2" id="text-2">
+</div>
+</section>
+<section id="slide-2-1">
+<h3 id="2-1"><span class="section-number-3">2.1.</span> Syntax</h3>
+<div>
+\begin{array}{lcl}
+   stmts & \to  & stmt\:\mathrm{;}\:stmts\,|\,\lambda\\
+   stmt  & \to  & \mathrm{input}\:id\,|\,\mathrm{print}\:expr\\
+         & \mid & id\,\mathrm{:=}\,expr\,|\,\mathrm{while}\:expr\:\mathrm{do}\,block\\
+         & \mid & \mathrm{if}\,expr\,\mathrm{then}\,block\,\mathrm{else}\,block\\
+   block & \to  & \mathrm{\{}\,stmts\,\mathrm{\}}\\
+\end{array}
+
+</div>
+
+</section>
+<section id="slide-2-2">
+<h3 id="2-2"><span class="section-number-3">2.2.</span> Syntax</h3>
+<div>
+\begin{array}{lcl}
+   expr  & \to  & n\\
+         & \mid & expr\,\mathrm{+}\,expr\\
+         & \mid & expr\,\mathrm{-}\,expr\\
+         & \mid & expr\,\mathrm{*}\,expr\\
+         & \mid & expr\,\mathrm{/}\,expr\\
+\end{array}
+
+</div>
+
+</section>
+<section id="slide-2-3">
+<h3 id="2-3"><span class="section-number-3">2.3.</span> Syntax</h3>
+<div>
+\begin{array}{lcl}
+   expr  & \to  & expr\,\mathrm{<}\,expr\\
+         & \mid & expr\,\mathrm{==}\,expr\\
+         & \mid & expr\,\mathrm{\&\&}\,expr\\
+         & \mid & \mathrm{!}\,expr\\
+\end{array}
+
+</div>
+
+</section>
+</section>
+<section>
+<section id="slide-3">
+<h2 id="3"><span class="section-number-2">3.</span> Implementation</h2>
+<div class="outline-text-2" id="text-3">
+</div>
+</section>
+<section id="slide-3-1">
+<h3 id="3-1"><span class="section-number-3">3.1.</span> Defining the lexer</h3>
+<div class="org-src-container">
+
+<pre class="src src-racket"><span style="color: #4f97d7;">(</span>define-tokens <span style="color: #7590db;">var-tokens</span> <span style="color: #bc6ec5;">(</span>IDENTIFIER<span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span>
+<span style="color: #4f97d7;">(</span>define-empty-tokens <span style="color: #7590db;">syntax-tokens</span>
+  <span style="color: #bc6ec5;">(</span><span style="color: #ce537a; font-weight: bold;">EOF</span>
+   ADD
+   SUBTRACT
+   PRODUCT
+   DIVISION
+   <span style="color: #4f97d7; font-weight: bold;">...</span> <span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span>
+</pre>
+</div>
+
+
+</section>
+<section id="slide-3-2">
+<h3 id="3-2"><span class="section-number-3">3.2.</span> Defining the lexer</h3>
+<div class="org-src-container">
+
+<pre class="src src-racket"><span style="color: #4f97d7;">(</span><span style="color: #4f97d7; font-weight: bold;">define</span> <span style="color: #7590db;">next-token</span>
+  <span style="color: #bc6ec5;">(</span>lexer-src-pos
+     <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span><span style="color: #4f97d7;">eof</span><span style="color: #67b11d;">)</span> <span style="color: #67b11d;">(</span>token-EOF<span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span>
+     <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span>:+ <span style="color: #a45bad;">#\newline</span> whitespace<span style="color: #67b11d;">)</span>
+      <span style="color: #67b11d;">(</span>return-without-pos <span style="color: #b1951d;">(</span>next-token input-port<span style="color: #b1951d;">)</span><span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span>
+     <span style="color: #2d9574;">[</span><span style="color: #a45bad;">#\+</span> <span style="color: #67b11d;">(</span>token-ADD<span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span>
+     <span style="color: #2d9574;">[</span><span style="color: #a45bad;">#\-</span> <span style="color: #67b11d;">(</span>token-SUBTRACT<span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span>
+     <span style="color: #4f97d7; font-weight: bold;">...</span>
+     <span style="color: #2d9574;">[</span><span style="color: #2d9574;">"if"</span> <span style="color: #67b11d;">(</span>token-IF<span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span>
+     <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span>:: alphabetic <span style="color: #b1951d;">(</span>:* <span style="color: #4f97d7;">(</span>:+ alphabetic numeric<span style="color: #4f97d7;">)</span><span style="color: #b1951d;">)</span><span style="color: #67b11d;">)</span>
+      <span style="color: #67b11d;">(</span>token-IDENTIFIER lexeme<span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span><span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span>
+</pre>
+</div>
+
+</section>
+<section id="slide-3-3">
+<h3 id="3-3"><span class="section-number-3">3.3.</span> Syntax tree</h3>
+<div class="org-src-container">
+
+<pre class="src src-racket"><span style="color: #4f97d7;">(</span><span style="color: #4f97d7; font-weight: bold;">struct</span> value
+  <span style="color: #bc6ec5;">(</span>value<span style="color: #bc6ec5;">)</span>
+  <span style="color: #cd5c5c;">#:transparent</span><span style="color: #4f97d7;">)</span>
+
+<span style="color: #4f97d7;">(</span><span style="color: #4f97d7; font-weight: bold;">struct</span> var
+  <span style="color: #bc6ec5;">(</span>id<span style="color: #bc6ec5;">)</span>
+  <span style="color: #cd5c5c;">#:transparent</span><span style="color: #4f97d7;">)</span>
+
+<span style="color: #4f97d7;">(</span><span style="color: #4f97d7; font-weight: bold;">struct</span> add
+  <span style="color: #bc6ec5;">(</span>left right<span style="color: #bc6ec5;">)</span>
+  <span style="color: #cd5c5c;">#:transparent</span><span style="color: #4f97d7;">)</span>  
+</pre>
+</div>
+
+</section>
+<section id="slide-3-4">
+<h3 id="3-4"><span class="section-number-3">3.4.</span> Defining the parser</h3>
+<div class="org-src-container">
+
+<pre class="src src-racket"><span style="color: #4f97d7;">(</span><span style="color: #4f97d7; font-weight: bold;">define</span> <span style="color: #7590db;">imp-parser</span>
+  <span style="color: #bc6ec5;">(</span>parser
+   <span style="color: #2d9574;">(</span>start statements<span style="color: #2d9574;">)</span>
+   <span style="color: #2d9574;">(</span>end <span style="color: #ce537a; font-weight: bold;">EOF</span><span style="color: #2d9574;">)</span>
+   <span style="color: #2d9574;">(</span>tokens value-tokens var-tokens syntax-tokens<span style="color: #2d9574;">)</span>
+   <span style="color: #2d9574;">(</span>src-pos<span style="color: #2d9574;">)</span>
+</pre>
+</div>
+
+</section>
+<section id="slide-3-5">
+<h3 id="3-5"><span class="section-number-3">3.5.</span> Defining the parser</h3>
+<div class="org-src-container">
+
+<pre class="src src-racket"><span style="color: #4f97d7;">(</span>precs
+ <span style="color: #bc6ec5;">(</span>nonassoc NOT EQ LT<span style="color: #bc6ec5;">)</span>
+ <span style="color: #bc6ec5;">(</span>left ADD SUBTRACT<span style="color: #bc6ec5;">)</span>
+ <span style="color: #bc6ec5;">(</span>left PRODUCT DIVISION AND<span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span>  
+</pre>
+</div>
+
+</section>
+<section id="slide-3-6">
+<h3 id="3-6"><span class="section-number-3">3.6.</span> Defining the parser</h3>
+<div class="org-src-container">
+
+<pre class="src src-racket"><span style="color: #4f97d7;">(</span>grammar
+ <span style="color: #bc6ec5;">(</span>statements <span style="color: #2d9574;">[</span><span style="color: #67b11d;">()</span> '<span style="color: #67b11d;">()</span><span style="color: #2d9574;">]</span>
+             <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span>statement statements<span style="color: #67b11d;">)</span> <span style="color: #67b11d;">(</span><span style="color: #4f97d7;">cons</span> $1 $2<span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span><span style="color: #bc6ec5;">)</span>
+ <span style="color: #bc6ec5;">(</span>statement <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span>IDENTIFIER ASSIGN expr SEMI<span style="color: #67b11d;">)</span> <span style="color: #67b11d;">(</span>assign <span style="color: #b1951d;">(</span>var $1<span style="color: #b1951d;">)</span> $3<span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span>
+            <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span>PRINT expr SEMI<span style="color: #67b11d;">)</span> <span style="color: #67b11d;">(</span>sprint $2<span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span>
+            <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span>IF expr THEN block ELSE block<span style="color: #67b11d;">)</span> <span style="color: #67b11d;">(</span>eif $2 $4 $6<span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span>
+            <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span>WHILE expr DO block<span style="color: #67b11d;">)</span> <span style="color: #67b11d;">(</span>ewhile $2 $4<span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span>
+            <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span>INPUT IDENTIFIER SEMI<span style="color: #67b11d;">)</span> <span style="color: #67b11d;">(</span>input <span style="color: #b1951d;">(</span>var $2<span style="color: #b1951d;">)</span><span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span><span style="color: #bc6ec5;">)</span>
+ <span style="color: #bc6ec5;">(</span>block <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span>BEGIN statements END<span style="color: #67b11d;">)</span> $2<span style="color: #2d9574;">]</span><span style="color: #bc6ec5;">)</span>
+</pre>
+</div>
+
+</section>
+<section id="slide-3-7">
+<h3 id="3-7"><span class="section-number-3">3.7.</span> Defining the parser</h3>
+<div class="org-src-container">
+
+<pre class="src src-racket"><span style="color: #4f97d7;">(</span>expr  <span style="color: #bc6ec5;">[</span><span style="color: #2d9574;">(</span>NUMBER<span style="color: #2d9574;">)</span> <span style="color: #2d9574;">(</span>value $1<span style="color: #2d9574;">)</span><span style="color: #bc6ec5;">]</span>
+       <span style="color: #bc6ec5;">[</span><span style="color: #2d9574;">(</span>IDENTIFIER<span style="color: #2d9574;">)</span> <span style="color: #2d9574;">(</span>var $1<span style="color: #2d9574;">)</span><span style="color: #bc6ec5;">]</span>
+       <span style="color: #bc6ec5;">[</span><span style="color: #2d9574;">(</span>expr ADD expr<span style="color: #2d9574;">)</span> <span style="color: #2d9574;">(</span>add $1 $3<span style="color: #2d9574;">)</span><span style="color: #bc6ec5;">]</span>
+       <span style="color: #bc6ec5;">[</span><span style="color: #2d9574;">(</span>expr SUBTRACT expr<span style="color: #2d9574;">)</span> <span style="color: #2d9574;">(</span>minus $1 $3<span style="color: #2d9574;">)</span><span style="color: #bc6ec5;">]</span>
+       <span style="color: #bc6ec5;">[</span><span style="color: #2d9574;">(</span>expr PRODUCT expr<span style="color: #2d9574;">)</span> <span style="color: #2d9574;">(</span>mult $1 $3<span style="color: #2d9574;">)</span><span style="color: #bc6ec5;">]</span>
+       <span style="color: #bc6ec5;">[</span><span style="color: #2d9574;">(</span>expr DIVISION expr<span style="color: #2d9574;">)</span> <span style="color: #2d9574;">(</span>divv $1 $3<span style="color: #2d9574;">)</span><span style="color: #bc6ec5;">]</span>
+       <span style="color: #bc6ec5;">[</span><span style="color: #2d9574;">(</span>expr LT expr<span style="color: #2d9574;">)</span> <span style="color: #2d9574;">(</span>lt $1 $3<span style="color: #2d9574;">)</span><span style="color: #bc6ec5;">]</span>
+       <span style="color: #bc6ec5;">[</span><span style="color: #2d9574;">(</span>expr EQ expr<span style="color: #2d9574;">)</span> <span style="color: #2d9574;">(</span>eeq $1 $3<span style="color: #2d9574;">)</span><span style="color: #bc6ec5;">]</span>
+       <span style="color: #bc6ec5;">[</span><span style="color: #2d9574;">(</span>expr AND expr<span style="color: #2d9574;">)</span> <span style="color: #2d9574;">(</span>eand $1 $3<span style="color: #2d9574;">)</span><span style="color: #bc6ec5;">]</span>
+       <span style="color: #bc6ec5;">[</span><span style="color: #2d9574;">(</span>NOT expr<span style="color: #2d9574;">)</span> <span style="color: #2d9574;">(</span>enot $2<span style="color: #2d9574;">)</span><span style="color: #bc6ec5;">]</span>
+       <span style="color: #bc6ec5;">[</span><span style="color: #2d9574;">(</span>LPAREN expr RPAREN<span style="color: #2d9574;">)</span> $2<span style="color: #bc6ec5;">]</span><span style="color: #4f97d7;">)</span><span style="color: #e0211d; text-decoration: overline;">)</span>
+</pre>
+</div>
+
+</section>
+<section id="slide-3-8">
+<h3 id="3-8"><span class="section-number-3">3.8.</span> The interpreter</h3>
+<div class="org-src-container">
+
+<pre class="src src-racket"><span style="color: #4f97d7;">(</span><span style="color: #4f97d7; font-weight: bold;">define</span> <span style="color: #bc6ec5;">(</span><span style="color: #bc6ec5; font-weight: bold;">eval-stmt</span> env s<span style="color: #bc6ec5;">)</span>
+  <span style="color: #bc6ec5;">(</span><span style="color: #4f97d7;">match</span> s
+    <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span>input <span style="color: #b1951d;">(</span>var v<span style="color: #b1951d;">)</span><span style="color: #67b11d;">)</span>
+     <span style="color: #67b11d;">(</span><span style="color: #4f97d7; font-weight: bold;">begin</span>
+        <span style="color: #b1951d;">(</span><span style="color: #4f97d7;">display</span> <span style="color: #2d9574;">"Enter a value:"</span><span style="color: #b1951d;">)</span>
+        <span style="color: #b1951d;">(</span>read-value env v<span style="color: #b1951d;">)</span><span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span>
+    <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span>assign v e<span style="color: #67b11d;">)</span> <span style="color: #67b11d;">(</span>eval-assign env <span style="color: #b1951d;">(</span>var-id v<span style="color: #b1951d;">)</span> e<span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span>
+    <span style="color: #4f97d7; font-weight: bold;">...</span>
+    <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span>ewhile e1 blk1<span style="color: #67b11d;">)</span>
+     <span style="color: #67b11d;">(</span><span style="color: #4f97d7; font-weight: bold;">let</span> <span style="color: #b1951d;">(</span><span style="color: #4f97d7;">[</span><span style="color: #7590db;">c</span> <span style="color: #bc6ec5;">(</span>eval-expr env e1<span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">]</span><span style="color: #b1951d;">)</span>
+       <span style="color: #b1951d;">(</span><span style="color: #4f97d7; font-weight: bold;">if</span> <span style="color: #4f97d7;">(</span>true-value? <span style="color: #bc6ec5;">(</span><span style="color: #4f97d7;">cdr</span> c<span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span>
+           <span style="color: #4f97d7;">(</span>eval-stmt <span style="color: #bc6ec5;">(</span>eval-stmts env blk1<span style="color: #bc6ec5;">)</span>
+                      <span style="color: #bc6ec5;">(</span>ewhile e1 blk1<span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span>
+           env<span style="color: #b1951d;">)</span><span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span><span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span>
+</pre>
+</div>
+
+</section>
+<section id="slide-3-9">
+<h3 id="3-9"><span class="section-number-3">3.9.</span> Writing the interpreter</h3>
+<div class="org-src-container">
+
+<pre class="src src-racket"><span style="color: #4f97d7;">(</span><span style="color: #4f97d7; font-weight: bold;">define</span> <span style="color: #bc6ec5;">(</span><span style="color: #bc6ec5; font-weight: bold;">eval-expr</span> env e<span style="color: #bc6ec5;">)</span>
+  <span style="color: #bc6ec5;">(</span><span style="color: #4f97d7;">match</span> e
+    <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span>value val<span style="color: #67b11d;">)</span> <span style="color: #67b11d;">(</span><span style="color: #4f97d7;">cons</span> env <span style="color: #b1951d;">(</span>value val<span style="color: #b1951d;">)</span><span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span>
+    <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span>add e1 e2<span style="color: #67b11d;">)</span> <span style="color: #67b11d;">(</span>eval-op <span style="color: #4f97d7;">+</span> env e1 e2<span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span>
+    <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span>minus e1 e2<span style="color: #67b11d;">)</span> <span style="color: #67b11d;">(</span>eval-op <span style="color: #4f97d7;">-</span> env e1 e2<span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span>
+    <span style="color: #4f97d7; font-weight: bold;">...</span>
+    <span style="color: #2d9574;">[</span><span style="color: #67b11d;">(</span>var v<span style="color: #67b11d;">)</span> <span style="color: #67b11d;">(</span>lookup-env env <span style="color: #b1951d;">(</span>var-id v<span style="color: #b1951d;">)</span><span style="color: #67b11d;">)</span><span style="color: #2d9574;">]</span><span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span>
+</pre>
+</div>
+
+</section>
+<section id="slide-3-10">
+<h3 id="3-10"><span class="section-number-3">3.10.</span> Writing the interpreter</h3>
+<div class="org-src-container">
+
+<pre class="src src-racket"><span style="color: #4f97d7;">(</span><span style="color: #4f97d7; font-weight: bold;">define</span> <span style="color: #bc6ec5;">(</span><span style="color: #bc6ec5; font-weight: bold;">op-value</span> f env v1 v2<span style="color: #bc6ec5;">)</span>
+  <span style="color: #bc6ec5;">(</span><span style="color: #4f97d7;">cons</span> env <span style="color: #2d9574;">(</span>value <span style="color: #67b11d;">(</span>f <span style="color: #b1951d;">(</span>value-value v1<span style="color: #b1951d;">)</span>
+                      <span style="color: #b1951d;">(</span>value-value v2<span style="color: #b1951d;">)</span><span style="color: #67b11d;">)</span><span style="color: #2d9574;">)</span><span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span>
+
+<span style="color: #4f97d7;">(</span><span style="color: #4f97d7; font-weight: bold;">define</span> <span style="color: #bc6ec5;">(</span><span style="color: #bc6ec5; font-weight: bold;">eval-op</span> f env e1 e2<span style="color: #bc6ec5;">)</span>
+  <span style="color: #bc6ec5;">(</span><span style="color: #4f97d7; font-weight: bold;">let*</span> <span style="color: #2d9574;">(</span><span style="color: #67b11d;">[</span><span style="color: #7590db;">r1</span> <span style="color: #b1951d;">(</span>eval-expr env e1<span style="color: #b1951d;">)</span><span style="color: #67b11d;">]</span>
+         <span style="color: #67b11d;">[</span><span style="color: #7590db;">r2</span> <span style="color: #b1951d;">(</span>eval-expr <span style="color: #4f97d7;">(</span><span style="color: #4f97d7;">car</span> r1<span style="color: #4f97d7;">)</span> e2<span style="color: #b1951d;">)</span><span style="color: #67b11d;">]</span><span style="color: #2d9574;">)</span>
+    <span style="color: #2d9574;">(</span>op-value f <span style="color: #67b11d;">(</span><span style="color: #4f97d7;">car</span> r2<span style="color: #67b11d;">)</span> <span style="color: #67b11d;">(</span><span style="color: #4f97d7;">cdr</span> r1<span style="color: #67b11d;">)</span> <span style="color: #67b11d;">(</span><span style="color: #4f97d7;">cdr</span> r2<span style="color: #67b11d;">)</span><span style="color: #2d9574;">)</span><span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span>
+</pre>
+</div>
+
+</section>
+</section>
+<section>
+<section id="slide-4">
+<h2 id="4"><span class="section-number-2">4.</span> Making IMP language</h2>
+<div class="outline-text-2" id="text-4">
+</div>
+</section>
+<section id="slide-4-1">
+<h3 id="4-1"><span class="section-number-3">4.1.</span> Creating languages in Racket</h3>
+<ul>
+<li>To create a new language using a <span class="underline">raco</span> project, you
+need to define a reader.</li>
+<li>A reader is a module that implements a function named
+<span class="underline">read-syntax</span></li>
+
+</ul>
+
+</section>
+<section id="slide-4-2">
+<h3 id="4-2"><span class="section-number-3">4.2.</span> Creating languages in Racket</h3>
+<ul>
+<li>The function read-syntax receives two parameters:
+<ol>
+<li>the path of the input file and 2) the port to read data from the file.</li>
+
+</ol></li>
+
+<li>It should return a <span class="underline">syntax object</span> of the code parsed
+from the input file.</li>
+
+</ul>
+
+</section>
+<section id="slide-4-3">
+<h3 id="4-3"><span class="section-number-3">4.3.</span> The IMP reader</h3>
+<div class="org-src-container">
+
+<pre class="src src-racket"><span style="color: #4f97d7;">(</span><span style="color: #4f97d7; font-weight: bold;">provide</span> <span style="color: #bc6ec5;">(</span><span style="color: #4f97d7; font-weight: bold;">rename-out</span> <span style="color: #2d9574;">[</span>imp-read-syntax <span style="color: #4f97d7;">read-syntax</span><span style="color: #2d9574;">]</span><span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span>
+
+<span style="color: #4f97d7;">(</span><span style="color: #4f97d7; font-weight: bold;">define</span> <span style="color: #bc6ec5;">(</span><span style="color: #bc6ec5; font-weight: bold;">imp-read-syntax</span> path port<span style="color: #bc6ec5;">)</span>
+  <span style="color: #bc6ec5;">(</span><span style="color: #4f97d7;">datum-&gt;syntax</span>
+   <span style="color: #a45bad;">#f</span>
+   `<span style="color: #2d9574;">(</span><span style="color: #4f97d7; font-weight: bold;">module</span> <span style="color: #bc6ec5; font-weight: bold;">imp-mod</span> <span style="color: #7590db;">racket</span>
+      ,<span style="color: #67b11d;">(</span>finish <span style="color: #b1951d;">(</span>imp-interp <span style="color: #4f97d7;">(</span>parse port<span style="color: #4f97d7;">)</span><span style="color: #b1951d;">)</span><span style="color: #67b11d;">)</span><span style="color: #2d9574;">)</span><span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span>
+
+<span style="color: #4f97d7;">(</span><span style="color: #4f97d7; font-weight: bold;">define</span> <span style="color: #bc6ec5;">(</span><span style="color: #bc6ec5; font-weight: bold;">finish</span> env<span style="color: #bc6ec5;">)</span>
+  <span style="color: #bc6ec5;">(</span><span style="color: #4f97d7;">displayln</span> <span style="color: #2d9574;">"Finished!"</span><span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span>  
+</pre>
+</div>
+
+</section>
+<section id="slide-4-4">
+<h3 id="4-4"><span class="section-number-3">4.4.</span> Creating languages in Racket</h3>
+<ul>
+<li>Having a reader module, you should make it available in
+project's main module, in order to install the language
+and use it throught the lang directive.</li>
+
+</ul>
+
+</section>
+<section id="slide-4-5">
+<h3 id="4-5"><span class="section-number-3">4.5.</span> Creating languages in Racket</h3>
+<ul>
+<li>You can install the imp language using the command <span class="underline">raco pkg install</span></li>
+
+<li>Run the command the project's root directory (where main.rkt is located).</li>
+
+</ul>
+
+</section>
+<section id="slide-4-6">
+<h3 id="4-6"><span class="section-number-3">4.6.</span> IMP main module</h3>
+<div class="org-src-container">
+
+<pre class="src src-racket"><span style="color: #4f97d7;">(</span><span style="color: #4f97d7; font-weight: bold;">module</span> <span style="color: #bc6ec5; font-weight: bold;">reader</span> <span style="color: #7590db;">racket</span>
+  <span style="color: #bc6ec5;">(</span><span style="color: #4f97d7; font-weight: bold;">require</span> <span style="color: #2d9574;">"reader.rkt"</span><span style="color: #bc6ec5;">)</span>
+  <span style="color: #bc6ec5;">(</span><span style="color: #4f97d7; font-weight: bold;">provide</span> <span style="color: #4f97d7;">read</span> <span style="color: #4f97d7;">read-syntax</span><span style="color: #bc6ec5;">)</span><span style="color: #4f97d7;">)</span>
+</pre>
+</div>
+
+</section>
+</section>
+<section>
+<section id="slide-5">
+<h2 id="5"><span class="section-number-2">5.</span> Example</h2>
+<div class="outline-text-2" id="text-5">
+</div>
+</section>
+<section id="slide-5-1">
+<h3 id="5-1"><span class="section-number-3">5.1.</span> Example IMP code</h3>
+<div class="org-src-container">
+
+<pre class="src src-racket"><span style="color: #4f97d7; font-weight: bold;">#lang</span> <span style="color: #7590db;">imp</span>
+
+input n<span style="color: #2aa1ae; background-color: #292e34;">;</span>
+fact := <span style="color: #a45bad;">1</span> <span style="color: #2aa1ae; background-color: #292e34;">;</span>
+while <span style="color: #a45bad;">0</span> <span style="color: #4f97d7;">&lt;</span> n <span style="color: #4f97d7; font-weight: bold;">do</span>
+<span style="color: #4f97d7; font-weight: bold;">begin</span>
+  fact := fact <span style="color: #4f97d7;">*</span> n <span style="color: #2aa1ae; background-color: #292e34;">;</span>
+  n := n <span style="color: #4f97d7;">-</span> <span style="color: #a45bad;">1</span> <span style="color: #2aa1ae; background-color: #292e34;">;</span>
+end
+<span style="color: #4f97d7;">print</span> fact <span style="color: #2aa1ae; background-color: #292e34;">;</span>
+</pre>
+</div>
+</section>
+</section>
+</div>
+</div>
+<script src="file:///Users/rodrigo/reveal.js/dist/reveal.js"></script>
+<script src="file:///Users/rodrigo/reveal.js/plugin/markdown/markdown.js"></script>
+<script src="file:///Users/rodrigo/reveal.js/plugin/notes/notes.js"></script>
+<script src="file:///Users/rodrigo/reveal.js/plugin/search/search.js"></script>
+<script src="file:///Users/rodrigo/reveal.js/plugin/zoom/zoom.js"></script>
+<script>
+// Full list of configuration options available here:
+// https://github.com/hakimel/reveal.js#configuration
+Reveal.initialize({
+
+controls: true,
+progress: true,
+history: false,
+center: true,
+slideNumber: 'c',
+rollingLinks: false,
+keyboard: true,
+mouseWheel: false,
+fragmentInURL: false,
+hashOneBasedIndex: false,
+pdfSeparateFragments: true,
+overview: true,
+
+transition: 'linear',
+transitionSpeed: 'default',
+
+// Plugins with reveal.js 4.x
+plugins: [ RevealMarkdown, RevealNotes, RevealSearch, RevealZoom ],
+
+// Optional libraries used to extend reveal.js
+dependencies: [
+]
+
+});
+</script>
+</body>
+</html>

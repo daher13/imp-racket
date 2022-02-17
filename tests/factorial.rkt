@@ -1,4 +1,4 @@
-#lang imp
+#lang imp/debug/parse-only
 
 input n;
 fact := 1 ;

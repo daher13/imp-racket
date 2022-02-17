@@ -1,0 +1,274 @@
+#+OPTIONS: toc:nil date:nil reveal_mathjax:t
+#+OPTIONS: timestamp:nil
+#+REVEAL_TRANS: linear
+#+Title: A simple racket Interpreter: IMP
+
+* Objectives
+
+** Objectives
+
+- Present the syntax of IMP language.
+
+- Defining the IMP lexer and parser using Lex and yacc for racket
+
+** Objectives
+
+- Implementing the interpreter for IMP
+
+- Using the racket features for creating the IMP language within the
+  racket interpreter.
+
+* IMP language
+
+** Syntax
+
+\begin{array}{lcl}
+   stmts & \to  & stmt\:\mathrm{;}\:stmts\,|\,\lambda\\
+   stmt  & \to  & \mathrm{input}\:id\,|\,\mathrm{print}\:expr\\
+         & \mid & id\,\mathrm{:=}\,expr\,|\,\mathrm{while}\:expr\:\mathrm{do}\,block\\
+         & \mid & \mathrm{if}\,expr\,\mathrm{then}\,block\,\mathrm{else}\,block\\
+   block & \to  & \mathrm{\{}\,stmts\,\mathrm{\}}\\
+\end{array}
+
+** Syntax
+
+\begin{array}{lcl}
+   expr  & \to  & n\\
+         & \mid & expr\,\mathrm{+}\,expr\\
+         & \mid & expr\,\mathrm{-}\,expr\\
+         & \mid & expr\,\mathrm{*}\,expr\\
+         & \mid & expr\,\mathrm{/}\,expr\\
+\end{array}
+
+** Syntax
+
+\begin{array}{lcl}
+   expr  & \to  & expr\,\mathrm{<}\,expr\\
+         & \mid & expr\,\mathrm{==}\,expr\\
+         & \mid & expr\,\mathrm{\&\&}\,expr\\
+         & \mid & \mathrm{!}\,expr\\
+\end{array}
+
+* Implementation
+
+** Defining the lexer
+
+#+begin_src racket
+(define-tokens var-tokens (IDENTIFIER))
+(define-empty-tokens syntax-tokens
+  (EOF
+   ADD
+   SUBTRACT
+   PRODUCT
+   DIVISION
+   ... ))
+#+end_src
+
+
+** Defining the lexer
+
+#+begin_src racket
+(define next-token
+  (lexer-src-pos
+     [(eof) (token-EOF)]
+     [(:+ #\newline whitespace)
+      (return-without-pos (next-token input-port))]
+     [#\+ (token-ADD)]
+     [#\- (token-SUBTRACT)]
+     ...
+     ["if" (token-IF)]
+     [(:: alphabetic (:* (:+ alphabetic numeric)))
+      (token-IDENTIFIER lexeme)]))
+#+end_src
+
+** Syntax tree
+
+#+begin_src racket
+(struct value
+  (value)
+  #:transparent)
+
+(struct var
+  (id)
+  #:transparent)
+
+(struct add
+  (left right)
+  #:transparent)  
+#+end_src
+
+** Defining the parser
+
+#+begin_src racket
+(define imp-parser
+  (parser
+   (start statements)
+   (end EOF)
+   (tokens value-tokens var-tokens syntax-tokens)
+   (src-pos)
+#+end_src
+
+** Defining the parser
+
+#+begin_src racket
+   (precs
+    (nonassoc NOT EQ LT)
+    (left ADD SUBTRACT)
+    (left PRODUCT DIVISION AND))  
+#+end_src
+
+** Defining the parser
+
+#+begin_src racket
+   (grammar
+    (statements [() '()]
+                [(statement statements) (cons $1 $2)])
+    (statement [(IDENTIFIER ASSIGN expr SEMI) (assign (var $1) $3)]
+               [(PRINT expr SEMI) (sprint $2)]
+               [(IF expr THEN block ELSE block) (eif $2 $4 $6)]
+               [(WHILE expr DO block) (ewhile $2 $4)]
+               [(INPUT IDENTIFIER SEMI) (input (var $2))])
+    (block [(BEGIN statements END) $2])
+#+end_src
+
+** Defining the parser
+
+#+begin_src racket
+    (expr  [(NUMBER) (value $1)]
+           [(IDENTIFIER) (var $1)]
+           [(expr ADD expr) (add $1 $3)]
+           [(expr SUBTRACT expr) (minus $1 $3)]
+           [(expr PRODUCT expr) (mult $1 $3)]
+           [(expr DIVISION expr) (divv $1 $3)]
+           [(expr LT expr) (lt $1 $3)]
+           [(expr EQ expr) (eeq $1 $3)]
+           [(expr AND expr) (eand $1 $3)]
+           [(NOT expr) (enot $2)]
+           [(LPAREN expr RPAREN) $2]))
+#+end_src
+
+** The interpreter
+
+#+begin_src racket
+  (define (eval-stmt env s)
+    (match s
+      [(input (var v))
+       (begin
+          (display "Enter a value:")
+          (read-value env v))]
+      [(assign v e) (eval-assign env (var-id v) e)]
+      ...
+      [(ewhile e1 blk1)
+       (let ([c (eval-expr env e1)])
+         (if (true-value? (cdr c))
+             (eval-stmt (eval-stmts env blk1)
+                        (ewhile e1 blk1))
+             env))]))
+#+end_src
+
+** Writing the interpreter
+
+#+begin_src racket
+  (define (eval-expr env e)
+    (match e
+      [(value val) (cons env (value val))]
+      [(add e1 e2) (eval-op + env e1 e2)]
+      [(minus e1 e2) (eval-op - env e1 e2)]
+      ...
+      [(var v) (lookup-env env (var-id v))]))
+#+end_src
+
+** Writing the interpreter
+
+#+begin_src racket
+(define (op-value f env v1 v2)
+  (cons env (value (f (value-value v1)
+                      (value-value v2)))))
+
+(define (eval-op f env e1 e2)
+  (let* ([r1 (eval-expr env e1)]
+         [r2 (eval-expr (car r1) e2)])
+    (op-value f (car r2) (cdr r1) (cdr r2))))
+#+end_src
+
+* Making IMP language
+
+** Creating languages in Racket
+
+- To create a new language using a _raco_ project, you
+  need to define a reader.
+- A reader is a module that implements a function named
+  _read-syntax_
+
+** Creating languages in Racket
+
+- The function read-syntax receives two parameters:
+  1) the path of the input file and 2) the port to read data from the file.
+
+- It should return a _syntax object_ of the code parsed
+  from the input file.
+
+** The IMP reader
+
+#+begin_src racket
+(provide (rename-out [imp-read-syntax read-syntax]))
+
+(define (imp-read-syntax path port)
+  (datum->syntax
+   #f
+   `(module imp-mod racket
+      ,(finish (imp-interp (parse port))))))
+
+(define (finish env)
+  (displayln "Finished!"))  
+#+end_src
+
+** Creating languages in Racket
+
+- Having a reader module, you should make it available in
+  project's main module, in order to install the language
+  and use it throught the lang directive.
+
+** Creating languages in Racket
+
+- You can install the imp language using the command _raco pkg install_
+
+- Run the command the project's root directory (where main.rkt is located).
+
+** IMP main module
+
+#+begin_src racket
+(module reader racket
+  (require "reader.rkt")
+  (provide read read-syntax))
+#+end_src
+
+* Example
+
+** Example IMP code
+
+#+begin_src racket
+#lang imp
+
+input n;
+fact := 1 ;
+while 0 < n do
+begin
+  fact := fact * n ;
+  n := n - 1 ;
+end
+print fact ;
+#+end_src
+
+* Tasks
+
+** Task 1. Documentation
+
+- Use the scribble racket tool for documenting the code.
+
+** Task 2. Extending the language
+
+- Extend the language with a for command.
+  
+- Modify the lexer, parser, interpreter and syntax tree.
+  
