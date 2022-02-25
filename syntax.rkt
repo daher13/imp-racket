@@ -64,4 +64,8 @@
   (econd block)
   #:transparent)
 
+(struct efor
+  (expr1 expr2 for-block)
+  #:transparent)
+
 (provide (all-defined-out))

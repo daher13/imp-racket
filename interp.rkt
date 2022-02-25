@@ -6,7 +6,7 @@
 
 (define (read-value env v)
   (let ([x (read)])
-      (hash-set env (var-id v) (value x))))
+    (hash-set env (var-id v) (value x))))
 
 ;; looking up an environment
 ;; lookup-env : environment * var -> environment * value
@@ -62,8 +62,8 @@
   (match s
     [(input (var v))
      (begin
-        (display "Enter a value:")
-        (read-value env v))]
+       (display "Enter a value:")
+       (read-value env v))]
     [(assign v e) (eval-assign env (var-id v) e)]
     [(eif e1 blk1 blk2)
      (let ([c (eval-expr env e1)])
@@ -76,6 +76,15 @@
            (eval-stmt (eval-stmts env blk1)
                       (ewhile e1 blk1))
            env))]
+
+    [(efor e1 e2 blk1)
+     (let ([n1 (eval-expr env e1)]
+           [n2 (eval-expr env e2)])
+       (if (true-value? (< n1 n2))
+           (eval-stmt (eval-stmts env blk1)
+                      (efor (+ n1 1) n2 blk1))
+           env))]
+    
     [(sprint e1)
      (let ([v (eval-expr env e1)])
        (begin
@@ -87,7 +96,7 @@
   (match blk
     ['() env]
     [(cons s blks) (let ([nenv (eval-stmt env s)])
-                       (eval-stmts nenv blks))]))
+                     (eval-stmts nenv blks))]))
 
 
 (define (imp-interp prog)

@@ -27,7 +27,8 @@
    BEGIN
    END
    PRINT
-   INPUT))
+   INPUT
+   FOR))
 
 (define next-token
   (lexer-src-pos
@@ -55,6 +56,7 @@
    ["end" (token-END)]
    ["print" (token-PRINT)]
    ["input" (token-INPUT)]
+   ["for" (token-FOR)]
    [(:: alphabetic (:* (:+ alphabetic numeric)))
     (token-IDENTIFIER lexeme)]
    [(:: numeric (:* numeric))

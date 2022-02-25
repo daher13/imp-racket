@@ -26,6 +26,7 @@
                [(PRINT expr SEMI) (sprint $2)]
                [(IF expr THEN block ELSE block) (eif $2 $4 $6)]
                [(WHILE expr DO block) (ewhile $2 $4)]
+               [(FOR expr expr DO block) (efor $2 $3 $5)]
                [(INPUT IDENTIFIER SEMI) (input (var $2))])
     (block [(BEGIN statements END) $2])
     (expr  [(NUMBER) (value $1)]
