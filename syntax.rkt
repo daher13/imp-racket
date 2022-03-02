@@ -65,7 +65,7 @@
   #:transparent)
 
 (struct efor
-  (expr1 expr2 for-block)
+  (value1 value2 block)
   #:transparent)
 
 (provide (all-defined-out))

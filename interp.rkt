@@ -57,7 +57,6 @@
     (hash-set env v (cdr res))))
 
 ; eval-stmt : environment * statement -> environment
-
 (define (eval-stmt env s)
   (match s
     [(input (var v))

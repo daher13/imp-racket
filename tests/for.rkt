@@ -2,5 +2,5 @@
 
 for 1 10 do
 begin
-input n
+input n;
 end
