@@ -1,0 +1,8 @@
+{
+  "editor.defaultFormatter": "evzen-wybitul.magic-racket",
+  "editor.formatOnSave": false,
+
+  "search.exclude": {
+    "slides/": true
+  }
+}

@@ -1,6 +1,10 @@
 #lang imp
 
-for 1 10 do
+x := 1;
+
+for i := 1 to 10 do
 begin
-input n;
+x := x + i;
+print i;
 end
+print x;

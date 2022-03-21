@@ -56,6 +56,12 @@
   (let* ([res (eval-expr env e)])
     (hash-set env v (cdr res))))
 
+(define (efor-aux env v1 v2 block)
+  (if (true-value? (cdr (op-value < env v1 v2)))
+      (let* ([env1 (eval-stmts env block)])
+        (efor-aux env1 (cdr (op-value + env1 v1 (value 1))) v2 block))
+      env))
+
 ; eval-stmt : environment * statement -> environment
 (define (eval-stmt env s)
   (match s
@@ -76,14 +82,12 @@
                       (ewhile e1 blk1))
            env))]
 
-    [(efor e1 e2 blk1)
-     (let ([n1 (eval-expr env e1)]
-           [n2 (eval-expr env e2)])
-       (if (true-value? (< n1 n2))
-           (eval-stmt (eval-stmts env blk1)
-                      (efor (+ n1 1) n2 blk1))
-           env))]
-    
+    [(efor id start end block)
+     (let ([v1 (eval-expr env start)]
+           [v2 (eval-expr env end)])
+       (eval-assign env v1 (eval-expr env v1))
+       (efor-aux env (cdr v1) (cdr v2) block))]
+
     [(sprint e1)
      (let ([v (eval-expr env e1)])
        (begin

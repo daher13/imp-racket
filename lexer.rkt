@@ -28,6 +28,7 @@
    END
    PRINT
    INPUT
+   TO
    FOR))
 
 (define next-token
@@ -57,6 +58,7 @@
    ["print" (token-PRINT)]
    ["input" (token-INPUT)]
    ["for" (token-FOR)]
+   ["to" (token-TO)]
    [(:: alphabetic (:* (:+ alphabetic numeric)))
     (token-IDENTIFIER lexeme)]
    [(:: numeric (:* numeric))
